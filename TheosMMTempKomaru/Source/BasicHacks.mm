@@ -106,59 +106,42 @@ void* BasicHacks::HacksThread(void* arg)
 
         if (KTempVars.SunModToggle)
         {
-            // BaseAddr and target already calculated above
-            
             if (BaseAddr == 0) {
                 statusMessage = "Module not found!";
-                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Can't find Unity module");
+                snprintf(debugBuffer, sizeof(debugBuffer), "Error: UnityFramework not found");
                 continue;
             }
             
-            uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
-            
-            // We're patching a CODE section, which is protected
-            // Need to make it writable first
-            size_t pageSize = sysconf(_SC_PAGE_SIZE);
-            uintptr_t pageStart = target & ~(pageSize - 1);
-            size_t protectSize = pageSize;
+            // Try the EXACT offset iGameGod gave us, but write as DATA not instruction
+            uintptr_t target = BaseAddr + 0x3121AB4;
             
             @try {
-                // Make page writable
-                vm_protect(mach_task_self(), pageStart, protectSize, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE);
+                // Read current value
+                uint32_t beforeValue = *(uint32_t*)target;
                 
-                // Read original instruction
-                uint32_t currentInstr = *(uint32_t*)target;
+                // Write 999999
+                uint32_t* ptr = (uint32_t*)target;
+                *ptr = 999999;
                 
-                // Patch the instruction
-                uint32_t* targetPtr = (uint32_t*)target;
-                *targetPtr = PATCH_BYTES;
+                // Read back
+                uint32_t afterValue = *(uint32_t*)target;
                 
-                // Flush instruction/data caches
-                __builtin_arm_dmb(0xB);  // Full memory barrier
-                __builtin_arm_isb(0xF);  // ISB - flush prefetch buffer
-                
-                // Restore protection
-                vm_protect(mach_task_self(), pageStart, protectSize, FALSE, VM_PROT_READ | VM_PROT_EXECUTE);
-                
-                // Verify write
-                uint32_t readBack = *(uint32_t*)target;
-                
-                snprintf(debugBuffer, sizeof(debugBuffer), 
-                    "Code patch attempt\nTarget: 0x%lx\nOrig: 0x%08x\nNew: 0x%08x\n%s",
+                // Log for debugging
+                snprintf(debugBuffer, sizeof(debugBuffer),
+                    "Base: 0x%lx\nTarget: 0x%lx\nBefore: %u\nAfter: %u\n%s",
+                    BaseAddr & 0xFFFFFFFF,
                     target & 0xFFFFFFFF,
-                    currentInstr,
-                    readBack,
-                    (readBack == PATCH_BYTES) ? "✓ Patched" : "✗ Failed");
+                    beforeValue,
+                    afterValue,
+                    (afterValue == 999999) ? "✓ Written!" : "✗ Not written!");
                 
-                if (readBack == PATCH_BYTES) {
-                    statusMessage = "Instruction Patched!";
-                    isCoinPatchApplied = true;
-                } else {
-                    statusMessage = "Patch verification failed";
-                }
+                statusMessage = (afterValue == 999999) ? "Patch Active!" : "Write failed";
+                isCoinPatchApplied = true;
+                
+                os_log(OS_LOG_DEFAULT, "KTemp: Target=%lx Before=%u After=%u", target, beforeValue, afterValue);
             } @catch (NSException *e) {
-                statusMessage = "Exception during patch!";
-                snprintf(debugBuffer, sizeof(debugBuffer), "Error: %s", [[e description] UTF8String]);
+                statusMessage = "Exception!";
+                snprintf(debugBuffer, sizeof(debugBuffer), "Memory access error");
             }
         } 
         else 
