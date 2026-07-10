@@ -36,8 +36,8 @@ namespace offsets {
     // Original bytes (clean game value)
     constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
     
-    // 999999 in hex = 0x000F423F
-    constexpr uint32_t PATCH_BYTES              = 999999;  // Will write 999999 directly
+    // Test with 123456 to see if ANY offset shows change
+    constexpr uint32_t PATCH_BYTES              = 123456;  // Test value
 }
 
 void* BasicHacks::HacksThread(void* arg)
