@@ -20,6 +20,9 @@ public:
 
     static bool IsValidPointer(long Offset);
     static void* HacksThread(void* arg);
+    static bool GetPatchStatus(); // Returns true if patch is applied
+    static bool IsThreadRunning(); // Returns true if hack thread is running
+    static const char* GetStatusMessage(); // Returns detailed status message
 
     void Initialize();
 

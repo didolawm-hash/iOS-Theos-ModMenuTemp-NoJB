@@ -7,6 +7,7 @@ https://github.com/VenerableCode/iOS-Theos-ModMenuTemp-NoJB
 
 #include "UserMenu.h"
 #include "Includes.h"
+#include "../Source/BasicHacks.h"
 
 void UserMenu::DrawMenu()
 {
@@ -29,6 +30,22 @@ void UserMenu::DrawMenu()
 
         // --- ADDED YOUR MOD TOGGLE HERE ---
         ImGui::Checkbox("Infinite Sun", &KTempVars.SunModToggle);
+        
+        // Status indicator with detailed message
+        bool patchApplied = BasicHacks::GetPatchStatus();
+        bool threadRunning = BasicHacks::IsThreadRunning();
+        const char* statusMsg = BasicHacks::GetStatusMessage();
+        
+        ImVec4 statusColor;
+        if (!threadRunning) {
+            statusColor = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow - thread not ready
+        } else if (patchApplied) {
+            statusColor = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // Green - patch active
+        } else {
+            statusColor = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // Red - patch inactive
+        }
+        
+        ImGui::TextColored(statusColor, "Status: %s", statusMsg);
         
         ImGui::Separator(); // Adds a nice line to separate your mod from the settings
 
