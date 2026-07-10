@@ -10,6 +10,7 @@ Jailed (NoJB) Mod Menu Template for iOS Games
 #include <unistd.h>
 #include <os/log.h>
 #include <errno.h>
+#include <string.h>
 
 bool running = true;
 bool isCoinPatchApplied = false;
@@ -20,24 +21,24 @@ int lastErrno = 0;
 char debugBuffer[256] = {0};  // For displaying debug info in menu
 
 namespace offsets {
-    // The original offset works in iGameGod but not in our dylib
-    // Try multiple nearby offsets to find actual coin storage
-    constexpr uintptr_t OFFSET_TRY_0 = 0x3121AB0;  // Original
-    constexpr uintptr_t OFFSET_TRY_1 = 0x3121AB0 - 0x10;
-    constexpr uintptr_t OFFSET_TRY_2 = 0x3121AB0 - 0x8;
-    constexpr uintptr_t OFFSET_TRY_3 = 0x3121AB0 - 0x4;
-    constexpr uintptr_t OFFSET_TRY_4 = 0x3121AB0 + 0x4;
-    constexpr uintptr_t OFFSET_TRY_5 = 0x3121AB0 + 0x8;
-    constexpr uintptr_t OFFSET_TRY_6 = 0x3121AB0 + 0x10;
+    // The offset within UnityFramework module (as shown by iGameGod watchpoint)
+    // iGameGod showed: UnityFramework +51518132 = 0x3121ab4
+    constexpr uintptr_t OFFSET_TRY_0 = 0x3121ab4;  // Correct offset from iGameGod
+    constexpr uintptr_t OFFSET_TRY_1 = 0x3121aa0;
+    constexpr uintptr_t OFFSET_TRY_2 = 0x3121aa8;
+    constexpr uintptr_t OFFSET_TRY_3 = 0x3121aac;
+    constexpr uintptr_t OFFSET_TRY_4 = 0x3121ab8;
+    constexpr uintptr_t OFFSET_TRY_5 = 0x3121abc;
+    constexpr uintptr_t OFFSET_TRY_6 = 0x3121ac0;
     
-    // Current offset being tested (change this when testing)
-    constexpr uintptr_t OFFSET_BulletHeroesCoin = OFFSET_TRY_1;  // Testing -0x10
+    // Current offset being tested
+    constexpr uintptr_t OFFSET_BulletHeroesCoin = OFFSET_TRY_0;
     
     // Original bytes (clean game value)
     constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
     
-    // Test with 123456 to see if ANY offset shows change
-    constexpr uint32_t PATCH_BYTES              = 123456;  // Test value
+    // 999999 for infinite coins
+    constexpr uint32_t PATCH_BYTES              = 999999;
 }
 
 void* BasicHacks::HacksThread(void* arg)
@@ -52,8 +53,22 @@ void* BasicHacks::HacksThread(void* arg)
         using namespace offsets;
         usleep(100000);
 
-        // Get base address each iteration in case of ASLR
-        uintptr_t BaseAddr = (uintptr_t)_dyld_get_image_header(0);
+        // Get UnityFramework module base address (not main app!)
+        uintptr_t BaseAddr = 0;
+        uint32_t imageCount = _dyld_image_count();
+        for (uint32_t i = 0; i < imageCount; i++) {
+            const char* imageName = _dyld_get_image_name(i);
+            if (imageName && strstr(imageName, "UnityFramework")) {
+                BaseAddr = (uintptr_t)_dyld_get_image_header(i);
+                break;
+            }
+        }
+        
+        if (BaseAddr == 0) {
+            statusMessage = "UnityFramework not found!";
+            continue;
+        }
+        
         uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
         size_t pageSize = sysconf(_SC_PAGE_SIZE);
         uintptr_t pageStart = target & ~(pageSize - 1);
@@ -67,7 +82,21 @@ void* BasicHacks::HacksThread(void* arg)
         if (KTempVars.SunModToggle)
         {
             // Continuously apply patch - don't just apply once
-            uintptr_t BaseAddr = (uintptr_t)_dyld_get_image_header(0);
+            uintptr_t BaseAddr = 0;
+            uint32_t imageCount = _dyld_image_count();
+            for (uint32_t i = 0; i < imageCount; i++) {
+                const char* imageName = _dyld_get_image_name(i);
+                if (imageName && strstr(imageName, "UnityFramework")) {
+                    BaseAddr = (uintptr_t)_dyld_get_image_header(i);
+                    break;
+                }
+            }
+            
+            if (BaseAddr == 0) {
+                statusMessage = "UnityFramework not found!";
+                continue;
+            }
+            
             uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
             
             // Always read current value
@@ -86,7 +115,7 @@ void* BasicHacks::HacksThread(void* arg)
             // Update debug buffer for menu display
             snprintf(debugBuffer, sizeof(debugBuffer), 
                 "Base: 0x%lx\nTarget: 0x%lx\nBefore: 0x%08x\nAfter: 0x%08x\n%s",
-                BaseAddr & 0xFFFFFFFF,  // Show lower 32 bits
+                BaseAddr & 0xFFFFFFFF,
                 target & 0xFFFFFFFF,
                 currentValue,
                 readBack,
@@ -105,21 +134,33 @@ void* BasicHacks::HacksThread(void* arg)
             {
                 statusMessage = "Reverting patch...";
                 
-                uintptr_t BaseAddr = (uintptr_t)_dyld_get_image_header(0);
-                uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
+                uintptr_t BaseAddr = 0;
+                uint32_t imageCount = _dyld_image_count();
+                for (uint32_t i = 0; i < imageCount; i++) {
+                    const char* imageName = _dyld_get_image_name(i);
+                    if (imageName && strstr(imageName, "UnityFramework")) {
+                        BaseAddr = (uintptr_t)_dyld_get_image_header(i);
+                        break;
+                    }
+                }
                 
-                os_log(OS_LOG_DEFAULT, "KTemp: Toggle OFF - Reverting patch");
+                if (BaseAddr == 0) {
+                    statusMessage = "UnityFramework not found!";
+                } else {
+                    uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
+                    
+                    os_log(OS_LOG_DEFAULT, "KTemp: Toggle OFF - Reverting patch");
 
-                uint32_t* targetPtr = (uint32_t*)target;
-                *targetPtr = ORIGINAL_BYTES;  // Direct write
-                
-                // Flush any caches
-                __builtin_arm_dmb(0xB);  // Data memory barrier
-                
-                uint32_t newValue = *(uint32_t*)target;
-                os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch reverted! New value: 0x%08x", newValue);
-                statusMessage = "Patch Inactive";
-                isCoinPatchApplied = false;
+                    uint32_t* targetPtr = (uint32_t*)target;
+                    *targetPtr = ORIGINAL_BYTES;
+                    
+                    __builtin_arm_dmb(0xB);
+                    
+                    uint32_t newValue = *(uint32_t*)target;
+                    os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch reverted! New value: 0x%08x", newValue);
+                    statusMessage = "Patch Inactive";
+                    isCoinPatchApplied = false;
+                }
             } else {
                 statusMessage = "Patch Inactive";
             }
