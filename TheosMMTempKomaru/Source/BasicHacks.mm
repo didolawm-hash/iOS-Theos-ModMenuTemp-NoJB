@@ -57,30 +57,32 @@ void* BasicHacks::HacksThread(void* arg)
 
         if (KTempVars.SunModToggle)
         {
-            if (!isCoinPatchApplied) 
-            {
+            // Continuously apply patch - don't just apply once
+            uintptr_t BaseAddr = (uintptr_t)_dyld_get_image_header(0);
+            uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
+            
+            if (!isCoinPatchApplied) {
                 statusMessage = "Attempting patch...";
-                
-                uintptr_t BaseAddr = (uintptr_t)_dyld_get_image_header(0);
-                uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
-                
                 os_log(OS_LOG_DEFAULT, "KTemp: Toggle ON - BaseAddr: %lx, Target: %lx", BaseAddr, target);
+            }
 
-                // Use vm_write instead of mprotect for jailed app compatibility
-                mach_port_t task = mach_task_self();
-                kern_return_t kr = vm_write(task, target, (vm_offset_t)&PATCH_BYTES, sizeof(uint32_t));
+            // Use vm_write to apply patch continuously
+            mach_port_t task = mach_task_self();
+            kern_return_t kr = vm_write(task, target, (vm_offset_t)&PATCH_BYTES, sizeof(uint32_t));
+            
+            if (kr == KERN_SUCCESS) {
+                // Read back to verify what was written
+                uint32_t readValue = *(uint32_t*)target;
                 
-                if (kr == KERN_SUCCESS) {
-                    uint32_t newValue = *(uint32_t*)target;
-                    os_log(OS_LOG_DEFAULT, "KTemp: Patch applied via vm_write! New value: 0x%x", newValue);
+                if (!isCoinPatchApplied) {
+                    os_log(OS_LOG_DEFAULT, "KTemp: First patch applied! Value at target: 0x%x", readValue);
                     statusMessage = "Patch Active!";
                     isCoinPatchApplied = true;
-                } else {
-                    os_log(OS_LOG_DEFAULT, "KTemp: vm_write FAILED! kern_return: %d (target: %lx)", kr, target);
-                    statusMessage = "vm_write FAILED!";
                 }
+                // Keep patching every frame to ensure it stays patched
             } else {
-                statusMessage = "Patch Active!";
+                os_log(OS_LOG_DEFAULT, "KTemp: vm_write FAILED! kern_return: %d (target: %lx)", kr, target);
+                statusMessage = "vm_write FAILED!";
             }
         } 
         else 
@@ -99,7 +101,7 @@ void* BasicHacks::HacksThread(void* arg)
                 
                 if (kr == KERN_SUCCESS) {
                     uint32_t newValue = *(uint32_t*)target;
-                    os_log(OS_LOG_DEFAULT, "KTemp: Patch reverted via vm_write! New value: 0x%x", newValue);
+                    os_log(OS_LOG_DEFAULT, "KTemp: Patch reverted! New value: 0x%x", newValue);
                     statusMessage = "Patch Inactive";
                     isCoinPatchApplied = false;
                 } else {
