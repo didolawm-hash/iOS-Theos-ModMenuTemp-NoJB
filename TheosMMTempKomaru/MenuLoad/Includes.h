@@ -66,6 +66,7 @@ struct GlobalVariables
     bool StreamerMode = false; //Hide the menu during recording
     bool MoveMenu = false; //Move the menu
 
+		bool SunModToggle = false; // Add this line!
 
     float CameraFOV = 90.0f; //slider in MenuLoad -> UserMenu.mm
 
