@@ -20,13 +20,23 @@ int lastErrno = 0;
 char debugBuffer[256] = {0};  // For displaying debug info in menu
 
 namespace offsets {
-    // Relative static offset for Bullet Heroes
-    constexpr uintptr_t OFFSET_BulletHeroesCoin = 0x3121AB0;
+    // The original offset works in iGameGod but not in our dylib
+    // Try multiple nearby offsets to find actual coin storage
+    constexpr uintptr_t OFFSET_TRY_0 = 0x3121AB0;  // Original
+    constexpr uintptr_t OFFSET_TRY_1 = 0x3121AB0 - 0x10;
+    constexpr uintptr_t OFFSET_TRY_2 = 0x3121AB0 - 0x8;
+    constexpr uintptr_t OFFSET_TRY_3 = 0x3121AB0 - 0x4;
+    constexpr uintptr_t OFFSET_TRY_4 = 0x3121AB0 + 0x4;
+    constexpr uintptr_t OFFSET_TRY_5 = 0x3121AB0 + 0x8;
+    constexpr uintptr_t OFFSET_TRY_6 = 0x3121AB0 + 0x10;
+    
+    // Current offset being tested (change this when testing)
+    constexpr uintptr_t OFFSET_BulletHeroesCoin = OFFSET_TRY_1;  // Testing -0x10
     
     // Original bytes (clean game value)
     constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
     
-    // 999999 in hex = 0x0F423F, as 32-bit little-endian = 0x000F423F
+    // 999999 in hex = 0x000F423F
     constexpr uint32_t PATCH_BYTES              = 999999;  // Will write 999999 directly
 }
 
