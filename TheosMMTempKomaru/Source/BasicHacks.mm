@@ -112,36 +112,57 @@ void* BasicHacks::HacksThread(void* arg)
                 continue;
             }
             
-            // Try the EXACT offset iGameGod gave us, but write as DATA not instruction
-            uintptr_t target = BaseAddr + 0x3121AB4;
+            // Instead of patching a STATIC offset, scan DATA section for ACTUAL coin values
+            // and patch those directly (like iGameGod's watchpoint does)
             
-            @try {
-                // Read current value
-                uint32_t beforeValue = *(uint32_t*)target;
+            static uintptr_t coinStorageAddr = 0;
+            
+            // First time: search for coin value
+            if (coinStorageAddr == 0) {
+                // Search in DATA section (usually after code section, around offset 0x4000000+)
+                uintptr_t searchStart = BaseAddr + 0x3E00000;
+                uintptr_t searchEnd = BaseAddr + 0x4200000;
                 
-                // Write 999999
-                uint32_t* ptr = (uint32_t*)target;
-                *ptr = 999999;
-                
-                // Read back
-                uint32_t afterValue = *(uint32_t*)target;
-                
-                // Log for debugging
-                snprintf(debugBuffer, sizeof(debugBuffer),
-                    "Base: 0x%lx\nTarget: 0x%lx\nBefore: %u\nAfter: %u\n%s",
-                    BaseAddr & 0xFFFFFFFF,
-                    target & 0xFFFFFFFF,
-                    beforeValue,
-                    afterValue,
-                    (afterValue == 999999) ? "✓ Written!" : "✗ Not written!");
-                
-                statusMessage = (afterValue == 999999) ? "Patch Active!" : "Write failed";
-                isCoinPatchApplied = true;
-                
-                os_log(OS_LOG_DEFAULT, "KTemp: Target=%lx Before=%u After=%u", target, beforeValue, afterValue);
-            } @catch (NSException *e) {
-                statusMessage = "Exception!";
-                snprintf(debugBuffer, sizeof(debugBuffer), "Memory access error");
+                // Look for a value around current coins (scan for values 0-10million)
+                @try {
+                    for (uintptr_t addr = searchStart; addr < searchEnd; addr += 4) {
+                        uint32_t value = *(uint32_t*)addr;
+                        // Current coins should be a reasonable number
+                        if (value > 100 && value < 1000000 && value % 10 != 0) {
+                            // Found potential coin location
+                            coinStorageAddr = addr;
+                            os_log(OS_LOG_DEFAULT, "KTemp: Found coin at 0x%lx = %u", addr, value);
+                            break;
+                        }
+                    }
+                } @catch (NSException *e) {
+                    // Search failed
+                }
+            }
+            
+            // Patch the found coin address
+            if (coinStorageAddr != 0) {
+                @try {
+                    uint32_t currentValue = *(uint32_t*)coinStorageAddr;
+                    uint32_t* ptr = (uint32_t*)coinStorageAddr;
+                    *ptr = 999999;
+                    uint32_t afterValue = *(uint32_t*)coinStorageAddr;
+                    
+                    snprintf(debugBuffer, sizeof(debugBuffer),
+                        "Coin addr: 0x%lx\nBefore: %u\nAfter: %u\n%s",
+                        coinStorageAddr & 0xFFFFFFFF,
+                        currentValue,
+                        afterValue,
+                        (afterValue == 999999) ? "✓ Locked!" : "✗ Still changing");
+                    
+                    statusMessage = (afterValue == 999999) ? "Coins Locked!" : "Trying lock...";
+                    isCoinPatchApplied = true;
+                } @catch (NSException *e) {
+                    statusMessage = "Write failed!";
+                }
+            } else {
+                snprintf(debugBuffer, sizeof(debugBuffer), "Scanning for coins...");
+                statusMessage = "Searching...";
             }
         } 
         else 
