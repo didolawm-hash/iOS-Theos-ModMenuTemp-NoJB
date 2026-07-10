@@ -36,7 +36,6 @@ namespace offsets {
     // Coins value
     constexpr uint32_t PATCH_BYTES              = 999999;
 }
-}
 
 void* BasicHacks::HacksThread(void* arg)
 {
