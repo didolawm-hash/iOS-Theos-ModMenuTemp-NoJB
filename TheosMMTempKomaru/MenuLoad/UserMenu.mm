@@ -35,6 +35,7 @@ void UserMenu::DrawMenu()
         bool patchApplied = BasicHacks::GetPatchStatus();
         bool threadRunning = BasicHacks::IsThreadRunning();
         const char* statusMsg = BasicHacks::GetStatusMessage();
+        const char* debugInfo = BasicHacks::GetDebugInfo();
         
         ImVec4 statusColor;
         if (!threadRunning) {
@@ -46,6 +47,7 @@ void UserMenu::DrawMenu()
         }
         
         ImGui::TextColored(statusColor, "Status: %s", statusMsg);
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 1.0f, 1.0f), "%s", debugInfo);  // Cyan debug info
         
         ImGui::Separator(); // Adds a nice line to separate your mod from the settings
 

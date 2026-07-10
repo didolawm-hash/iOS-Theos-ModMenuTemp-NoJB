@@ -23,6 +23,7 @@ public:
     static bool GetPatchStatus(); // Returns true if patch is applied
     static bool IsThreadRunning(); // Returns true if hack thread is running
     static const char* GetStatusMessage(); // Returns detailed status message
+    static const char* GetDebugInfo(); // Returns debug information with addresses
 
     void Initialize();
 

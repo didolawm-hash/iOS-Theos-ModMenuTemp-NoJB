@@ -17,6 +17,7 @@ bool lastToggleState = false;
 bool threadIsRunning = false;
 const char* statusMessage = "Thread not started";
 int lastErrno = 0;
+char debugBuffer[256] = {0};  // For displaying debug info in menu
 
 namespace offsets {
     // Relative static offset for Bullet Heroes
@@ -59,38 +60,32 @@ void* BasicHacks::HacksThread(void* arg)
             uintptr_t BaseAddr = (uintptr_t)_dyld_get_image_header(0);
             uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
             
-            if (!isCoinPatchApplied) {
-                statusMessage = "Attempting patch...";
-                
-                // Log extensive debug info
-                uint32_t valueBeforePatch = *(uint32_t*)target;
-                os_log(OS_LOG_DEFAULT, "KTemp: Toggle ON");
-                os_log(OS_LOG_DEFAULT, "KTemp:   BaseAddr:     0x%lx", BaseAddr);
-                os_log(OS_LOG_DEFAULT, "KTemp:   Offset:       0x%lx", OFFSET_BulletHeroesCoin);
-                os_log(OS_LOG_DEFAULT, "KTemp:   Target:       0x%lx", target);
-                os_log(OS_LOG_DEFAULT, "KTemp:   Value BEFORE: 0x%08x", valueBeforePatch);
-                os_log(OS_LOG_DEFAULT, "KTemp:   Will patch to: 0x%08x", PATCH_BYTES);
-            }
-
-            // Use direct memory write instead of vm_write for current process
+            // Always read current value
+            uint32_t currentValue = *(uint32_t*)target;
+            
+            // Apply patch
             uint32_t* targetPtr = (uint32_t*)target;
-            *targetPtr = PATCH_BYTES;  // Direct write
+            *targetPtr = PATCH_BYTES;
             
             // Flush any caches
-            __builtin_arm_dmb(0xB);  // Data memory barrier
+            __builtin_arm_dmb(0xB);
             
-            // Verify write
-            uint32_t readValue = *(uint32_t*)target;
+            // Read back what we wrote
+            uint32_t readBack = *(uint32_t*)target;
             
-            if (readValue == PATCH_BYTES) {
-                if (!isCoinPatchApplied) {
-                    os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch applied successfully! Value is now: 0x%08x", readValue);
-                    statusMessage = "Patch Active!";
-                    isCoinPatchApplied = true;
-                }
-                // Keep patching every frame to ensure it stays patched
+            // Update debug buffer for menu display
+            snprintf(debugBuffer, sizeof(debugBuffer), 
+                "Base: 0x%lx\nTarget: 0x%lx\nBefore: 0x%08x\nAfter: 0x%08x\n%s",
+                BaseAddr & 0xFFFFFFFF,  // Show lower 32 bits
+                target & 0xFFFFFFFF,
+                currentValue,
+                readBack,
+                (readBack == PATCH_BYTES) ? "✓ SUCCESS" : "✗ MISMATCH");
+            
+            if (readBack == PATCH_BYTES) {
+                statusMessage = "Patch Active!";
+                isCoinPatchApplied = true;
             } else {
-                os_log(OS_LOG_DEFAULT, "KTemp: ✗ Patch FAILED! Expected 0x%08x but got 0x%08x", PATCH_BYTES, readValue);
                 statusMessage = "Patch FAILED!";
             }
         } 
@@ -149,4 +144,9 @@ bool BasicHacks::IsThreadRunning()
 const char* BasicHacks::GetStatusMessage()
 {
     return statusMessage;
+}
+
+const char* BasicHacks::GetDebugInfo()
+{
+    return debugBuffer;
 }
