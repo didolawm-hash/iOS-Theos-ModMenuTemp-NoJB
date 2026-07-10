@@ -56,7 +56,7 @@ void* BasicHacks::HacksThread(void* arg)
     while(running)
     {   
         using namespace offsets;
-        usleep(100000);
+        usleep(5000);  // 5ms = write every ~5ms (outpaces game updates)
 
         // Get base address each iteration in case of ASLR
         uintptr_t BaseAddr = 0;
