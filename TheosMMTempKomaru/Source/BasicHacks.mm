@@ -1,8 +1,6 @@
 /*
 IOS Theos Template Komaru
 Jailed (NoJB) Mod Menu Template for iOS Games
-By aq9
-https://github.com/VenerableCode/iOS-Theos-ModMenuTemp-NoJB
 */
 
 #include "BasicHacks.h"
@@ -12,23 +10,22 @@ https://github.com/VenerableCode/iOS-Theos-ModMenuTemp-NoJB
 #include <unistd.h>
 
 bool running = true;
-bool isSunPatchApplied = false;
+bool isCoinPatchApplied = false;
 
 namespace offsets {
-    // Relative static offset
-    constexpr uintptr_t OFFSET_PlantsVsZombiesSun  = 0x1E61A4;
+    // Relative static offset for Bullet Heroes
+    constexpr uintptr_t OFFSET_BulletHeroesCoin = 0x3121AB0;
     
-    // REPLACE THIS WITH YOUR REAL ORIGINAL BYTES!
-    // Leaving this as 0x00000000 will likely cause a crash when turning the mod OFF.
-    constexpr uint32_t ORIGINAL_BYTES              = 0x00000000; 
+    // Original bytes (Make sure to verify these in a clean game!)
+    constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
     
-    // Patch bytes (Little-Endian)
-    constexpr uint32_t PATCH_BYTES                 = 0x5284E1D5; 
+    // Your patch bytes (Converted to Little-Endian)
+    constexpr uint32_t PATCH_BYTES              = 0x0B133108; 
 }
 
 void* BasicHacks::HacksThread(void* arg)
 {
-    usleep(500000); 
+    sleep(5); // Allow game to load
     uintptr_t BaseAddr = (uintptr_t)_dyld_get_image_header(0);
 
     while(running)
@@ -36,35 +33,31 @@ void* BasicHacks::HacksThread(void* arg)
         using namespace offsets;
         usleep(100000);
 
-        if (KTempVars.SunModToggle) 
+        if (KTempVars.CoinModToggle) // Ensure this variable name matches your MenuLayout
         {
-            if (!isSunPatchApplied) 
+            if (!isCoinPatchApplied) 
             {
-                uintptr_t target = BaseAddr + OFFSET_PlantsVsZombiesSun;
-                
-                // Align to page size for memory protection
+                uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
                 size_t pageSize = sysconf(_SC_PAGE_SIZE);
                 uintptr_t pageStart = target & ~(pageSize - 1);
 
-                // Make memory writable
                 if (mprotect((void*)pageStart, pageSize, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
                     *(uint32_t*)target = PATCH_BYTES;
-                    isSunPatchApplied = true;
+                    isCoinPatchApplied = true;
                 }
             }
         } 
         else 
         {
-            if (isSunPatchApplied) 
+            if (isCoinPatchApplied) 
             {
-                uintptr_t target = BaseAddr + OFFSET_PlantsVsZombiesSun;
+                uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
                 size_t pageSize = sysconf(_SC_PAGE_SIZE);
                 uintptr_t pageStart = target & ~(pageSize - 1);
 
-                // Make memory writable
                 if (mprotect((void*)pageStart, pageSize, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
                     *(uint32_t*)target = ORIGINAL_BYTES;
-                    isSunPatchApplied = false;
+                    isCoinPatchApplied = false;
                 }
             }
         }
