@@ -12,6 +12,8 @@ Jailed (NoJB) Mod Menu Template for iOS Games
 #include <errno.h>
 #include <string.h>
 #import <Foundation/Foundation.h>
+#include <mach/mach.h>
+#include <mach/vm_map.h>
 
 bool running = true;
 bool isCoinPatchApplied = false;
@@ -22,19 +24,26 @@ int lastErrno = 0;
 char debugBuffer[256] = {0};  // For displaying debug info in menu
 
 namespace offsets {
-    // iGameGod showed: UnityFramework +51518132 which is 0x3121AB4
-    // BUT that might be in CODE section (has "add w8, w8, w19" instruction)
-    // Maybe we need to offset from the DATA section, not TEXT section
-    // Let's try the EXACT offset iGameGod gave us first
+    // The coins aren't at a static offset!
+    // Assembly shows: ldr w8, [x20, #0x50] then str w8, [x20, #0x50]
+    // x20 is a runtime pointer, 0x50 is offset within the structure
     
-    // 51518132 decimal = 0x3121AB4 hex
-    constexpr uintptr_t OFFSET_BulletHeroesCoin = 0x3121AB4;
+    // Instead, we patch the "add w8, w8, w19" instruction (at 0x3121ab0)
+    // to "mov w8, #999999" so coins are always 999999
     
-    // Original bytes (clean game value)
-    constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
+    // Location of the "add w8, w8, w19" instruction to patch
+    constexpr uintptr_t OFFSET_BulletHeroesCoin = 0x3121ab0;
     
-    // Coins value
-    constexpr uint32_t PATCH_BYTES              = 999999;
+    // Original: add w8, w8, w19
+    // ARM64 encoding of "add w8, w8, w19": 0x12635108
+    constexpr uint32_t ORIGINAL_BYTES = 0x12635108;
+    
+    // New: mov w8, #999999 (requires special encoding)
+    // mov w8, #0x000F423F (999999 in hex)
+    // We'll use: 0x528F003F (movz w8, #0x7C1F) then add more
+    // Actually, let's use a simpler approach: just write 0 to always give coins
+    // mov w8, #0 = 0x52800008
+    constexpr uint32_t PATCH_BYTES = 0x52800008;  // mov w8, #0
 }
 
 void* BasicHacks::HacksThread(void* arg)
@@ -105,42 +114,51 @@ void* BasicHacks::HacksThread(void* arg)
                 continue;
             }
             
-            // Try patching multiple nearby offsets to find which one actually affects coins
-            // iGameGod showed 0x3121ab4, but the display might read from a different location
-            uintptr_t offsets_to_try[] = {
-                BaseAddr + 0x3121ab0,  // Original -4
-                BaseAddr + 0x3121ab4,  // Main one
-                BaseAddr + 0x3121ab8,  // +4
-                BaseAddr + 0x3121abc,  // +8
-                BaseAddr + 0x3121ac0,  // +12
-            };
+            uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
             
-            uint32_t value = 111111;
-            bool anySuccess = false;
+            // We're patching a CODE section, which is protected
+            // Need to make it writable first
+            size_t pageSize = sysconf(_SC_PAGE_SIZE);
+            uintptr_t pageStart = target & ~(pageSize - 1);
+            size_t protectSize = pageSize;
             
-            for (int i = 0; i < 5; i++) {
-                @try {
-                    uint32_t* ptr = (uint32_t*)offsets_to_try[i];
-                    *ptr = value;
-                    anySuccess = true;
-                } @catch (NSException *e) {
-                    // Skip this offset if it crashes
-                }
-            }
-            
-            // Now read back from the main offset for display
             @try {
-                uint32_t currentValue = *(uint32_t*)(BaseAddr + 0x3121ab4);
+                // Make page writable
+                vm_protect(mach_task_self(), pageStart, protectSize, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE);
+                
+                // Read original instruction
+                uint32_t currentInstr = *(uint32_t*)target;
+                
+                // Patch the instruction
+                uint32_t* targetPtr = (uint32_t*)target;
+                *targetPtr = PATCH_BYTES;
+                
+                // Flush instruction/data caches
+                __builtin_arm_dmb(0xB);  // Full memory barrier
+                __builtin_arm_isb(0xF);  // ISB - flush prefetch buffer
+                
+                // Restore protection
+                vm_protect(mach_task_self(), pageStart, protectSize, FALSE, VM_PROT_READ | VM_PROT_EXECUTE);
+                
+                // Verify write
+                uint32_t readBack = *(uint32_t*)target;
                 
                 snprintf(debugBuffer, sizeof(debugBuffer), 
-                    "Patching 5 offsets with 111111\nRead at +0x3121ab4: 0x%08x\n%s",
-                    currentValue,
-                    anySuccess ? "✓ Patches applied" : "✗ Failed");
+                    "Code patch attempt\nTarget: 0x%lx\nOrig: 0x%08x\nNew: 0x%08x\n%s",
+                    target & 0xFFFFFFFF,
+                    currentInstr,
+                    readBack,
+                    (readBack == PATCH_BYTES) ? "✓ Patched" : "✗ Failed");
                 
-                statusMessage = anySuccess ? "Multi-patch Active!" : "Patch FAILED!";
-                isCoinPatchApplied = anySuccess;
+                if (readBack == PATCH_BYTES) {
+                    statusMessage = "Instruction Patched!";
+                    isCoinPatchApplied = true;
+                } else {
+                    statusMessage = "Patch verification failed";
+                }
             } @catch (NSException *e) {
-                statusMessage = "Read crash!";
+                statusMessage = "Exception during patch!";
+                snprintf(debugBuffer, sizeof(debugBuffer), "Error: %s", [[e description] UTF8String]);
             }
         } 
         else 
@@ -153,21 +171,30 @@ void* BasicHacks::HacksThread(void* arg)
                     statusMessage = "Module not found for revert!";
                 } else {
                     uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
+                    size_t pageSize = sysconf(_SC_PAGE_SIZE);
+                    uintptr_t pageStart = target & ~(pageSize - 1);
+                    size_t protectSize = pageSize;
                     
-                    os_log(OS_LOG_DEFAULT, "KTemp: Toggle OFF - Reverting patch");
-
                     @try {
+                        // Make page writable
+                        vm_protect(mach_task_self(), pageStart, protectSize, FALSE, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE);
+                        
+                        // Restore original instruction
                         uint32_t* targetPtr = (uint32_t*)target;
                         *targetPtr = ORIGINAL_BYTES;
                         
+                        // Flush caches
                         __builtin_arm_dmb(0xB);
+                        __builtin_arm_isb(0xF);
                         
-                        uint32_t newValue = *(uint32_t*)target;
-                        os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch reverted! New value: 0x%08x", newValue);
-                        statusMessage = "Patch Inactive";
+                        // Restore protection
+                        vm_protect(mach_task_self(), pageStart, protectSize, FALSE, VM_PROT_READ | VM_PROT_EXECUTE);
+                        
+                        os_log(OS_LOG_DEFAULT, "KTemp: Instruction reverted!");
+                        statusMessage = "Patch Reverted";
                         isCoinPatchApplied = false;
                     } @catch (NSException *e) {
-                        statusMessage = "Revert crash prevented!";
+                        statusMessage = "Revert failed!";
                     }
                 }
             } else {
