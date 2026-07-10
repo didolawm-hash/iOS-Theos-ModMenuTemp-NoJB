@@ -10,8 +10,6 @@ Jailed (NoJB) Mod Menu Template for iOS Games
 #include <unistd.h>
 #include <os/log.h>
 #include <errno.h>
-#include <mach/mach.h>
-#include <mach/vm_map.h>
 
 bool running = true;
 bool isCoinPatchApplied = false;
@@ -63,26 +61,37 @@ void* BasicHacks::HacksThread(void* arg)
             
             if (!isCoinPatchApplied) {
                 statusMessage = "Attempting patch...";
-                os_log(OS_LOG_DEFAULT, "KTemp: Toggle ON - BaseAddr: %lx, Target: %lx", BaseAddr, target);
+                
+                // Log extensive debug info
+                uint32_t valueBeforePatch = *(uint32_t*)target;
+                os_log(OS_LOG_DEFAULT, "KTemp: Toggle ON");
+                os_log(OS_LOG_DEFAULT, "KTemp:   BaseAddr:     0x%lx", BaseAddr);
+                os_log(OS_LOG_DEFAULT, "KTemp:   Offset:       0x%lx", OFFSET_BulletHeroesCoin);
+                os_log(OS_LOG_DEFAULT, "KTemp:   Target:       0x%lx", target);
+                os_log(OS_LOG_DEFAULT, "KTemp:   Value BEFORE: 0x%08x", valueBeforePatch);
+                os_log(OS_LOG_DEFAULT, "KTemp:   Will patch to: 0x%08x", PATCH_BYTES);
             }
 
-            // Use vm_write to apply patch continuously
-            mach_port_t task = mach_task_self();
-            kern_return_t kr = vm_write(task, target, (vm_offset_t)&PATCH_BYTES, sizeof(uint32_t));
+            // Use direct memory write instead of vm_write for current process
+            uint32_t* targetPtr = (uint32_t*)target;
+            *targetPtr = PATCH_BYTES;  // Direct write
             
-            if (kr == KERN_SUCCESS) {
-                // Read back to verify what was written
-                uint32_t readValue = *(uint32_t*)target;
-                
+            // Flush any caches
+            __builtin_arm_dmb(0xB);  // Data memory barrier
+            
+            // Verify write
+            uint32_t readValue = *(uint32_t*)target;
+            
+            if (readValue == PATCH_BYTES) {
                 if (!isCoinPatchApplied) {
-                    os_log(OS_LOG_DEFAULT, "KTemp: First patch applied! Value at target: 0x%x", readValue);
+                    os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch applied successfully! Value is now: 0x%08x", readValue);
                     statusMessage = "Patch Active!";
                     isCoinPatchApplied = true;
                 }
                 // Keep patching every frame to ensure it stays patched
             } else {
-                os_log(OS_LOG_DEFAULT, "KTemp: vm_write FAILED! kern_return: %d (target: %lx)", kr, target);
-                statusMessage = "vm_write FAILED!";
+                os_log(OS_LOG_DEFAULT, "KTemp: ✗ Patch FAILED! Expected 0x%08x but got 0x%08x", PATCH_BYTES, readValue);
+                statusMessage = "Patch FAILED!";
             }
         } 
         else 
@@ -96,18 +105,16 @@ void* BasicHacks::HacksThread(void* arg)
                 
                 os_log(OS_LOG_DEFAULT, "KTemp: Toggle OFF - Reverting patch");
 
-                mach_port_t task = mach_task_self();
-                kern_return_t kr = vm_write(task, target, (vm_offset_t)&ORIGINAL_BYTES, sizeof(uint32_t));
+                uint32_t* targetPtr = (uint32_t*)target;
+                *targetPtr = ORIGINAL_BYTES;  // Direct write
                 
-                if (kr == KERN_SUCCESS) {
-                    uint32_t newValue = *(uint32_t*)target;
-                    os_log(OS_LOG_DEFAULT, "KTemp: Patch reverted! New value: 0x%x", newValue);
-                    statusMessage = "Patch Inactive";
-                    isCoinPatchApplied = false;
-                } else {
-                    os_log(OS_LOG_DEFAULT, "KTemp: vm_write FAILED on revert! kern_return: %d", kr);
-                    statusMessage = "Revert FAILED!";
-                }
+                // Flush any caches
+                __builtin_arm_dmb(0xB);  // Data memory barrier
+                
+                uint32_t newValue = *(uint32_t*)target;
+                os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch reverted! New value: 0x%08x", newValue);
+                statusMessage = "Patch Inactive";
+                isCoinPatchApplied = false;
             } else {
                 statusMessage = "Patch Inactive";
             }
