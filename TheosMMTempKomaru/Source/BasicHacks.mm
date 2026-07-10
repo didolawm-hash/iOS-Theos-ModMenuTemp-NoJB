@@ -11,6 +11,7 @@ Jailed (NoJB) Mod Menu Template for iOS Games
 #include <os/log.h>
 #include <errno.h>
 #include <string.h>
+#import <Foundation/Foundation.h>
 
 bool running = true;
 bool isCoinPatchApplied = false;
@@ -53,20 +54,37 @@ void* BasicHacks::HacksThread(void* arg)
         using namespace offsets;
         usleep(100000);
 
-        // Get UnityFramework module base address (not main app!)
+        // Get base address each iteration in case of ASLR
         uintptr_t BaseAddr = 0;
         uint32_t imageCount = _dyld_image_count();
-        for (uint32_t i = 0; i < imageCount; i++) {
-            const char* imageName = _dyld_get_image_name(i);
-            if (imageName && strstr(imageName, "UnityFramework")) {
-                BaseAddr = (uintptr_t)_dyld_get_image_header(i);
-                break;
+        
+        // Log first few modules on first run (for debugging)
+        static bool firstRun = true;
+        if (firstRun && KTempVars.SunModToggle) {
+            firstRun = false;
+            os_log(OS_LOG_DEFAULT, "KTemp: Found %u loaded modules", imageCount);
+            for (uint32_t i = 0; i < imageCount && i < 20; i++) {
+                const char* name = _dyld_get_image_name(i);
+                if (name) os_log(OS_LOG_DEFAULT, "KTemp:  [%u] %s", i, name);
             }
         }
         
-        if (BaseAddr == 0) {
-            statusMessage = "UnityFramework not found!";
-            continue;
+        for (uint32_t i = 0; i < imageCount; i++) {
+            const char* imageName = _dyld_get_image_name(i);
+            if (!imageName) continue;
+            
+            // Try multiple module name patterns
+            if (strstr(imageName, "UnityFramework") || 
+                strstr(imageName, "UnityFramework.framework") ||
+                strstr(imageName, "Unity") ||
+                strstr(imageName, "BulletHeroes")) {
+                
+                BaseAddr = (uintptr_t)_dyld_get_image_header(i);
+                if (BaseAddr != 0) {
+                    os_log(OS_LOG_DEFAULT, "KTemp: Found module: %s at 0x%lx", imageName, BaseAddr);
+                    break;
+                }
+            }
         }
         
         uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
@@ -81,51 +99,62 @@ void* BasicHacks::HacksThread(void* arg)
 
         if (KTempVars.SunModToggle)
         {
-            // Continuously apply patch - don't just apply once
-            uintptr_t BaseAddr = 0;
-            uint32_t imageCount = _dyld_image_count();
-            for (uint32_t i = 0; i < imageCount; i++) {
-                const char* imageName = _dyld_get_image_name(i);
-                if (imageName && strstr(imageName, "UnityFramework")) {
-                    BaseAddr = (uintptr_t)_dyld_get_image_header(i);
-                    break;
-                }
-            }
+            // BaseAddr and target already calculated above
             
             if (BaseAddr == 0) {
-                statusMessage = "UnityFramework not found!";
+                statusMessage = "Module not found!";
+                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Can't find Unity module\nScanning %u modules...", imageCount);
                 continue;
             }
             
             uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
             
+            // Safety check - make sure target address is valid
+            if (target < 0x100000000ULL) {  // Must be above 4GB on 64-bit iOS
+                statusMessage = "Invalid target!";
+                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Target too low\n0x%lx", target);
+                continue;
+            }
+            
             // Always read current value
-            uint32_t currentValue = *(uint32_t*)target;
+            uint32_t currentValue = 0;
+            @try {
+                currentValue = *(uint32_t*)target;
+            } @catch (NSException *e) {
+                statusMessage = "Crash prevented!";
+                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Bad address\n0x%lx", target);
+                continue;
+            }
             
-            // Apply patch
-            uint32_t* targetPtr = (uint32_t*)target;
-            *targetPtr = PATCH_BYTES;
-            
-            // Flush any caches
-            __builtin_arm_dmb(0xB);
-            
-            // Read back what we wrote
-            uint32_t readBack = *(uint32_t*)target;
-            
-            // Update debug buffer for menu display
-            snprintf(debugBuffer, sizeof(debugBuffer), 
-                "Base: 0x%lx\nTarget: 0x%lx\nBefore: 0x%08x\nAfter: 0x%08x\n%s",
-                BaseAddr & 0xFFFFFFFF,
-                target & 0xFFFFFFFF,
-                currentValue,
-                readBack,
-                (readBack == PATCH_BYTES) ? "✓ SUCCESS" : "✗ MISMATCH");
-            
-            if (readBack == PATCH_BYTES) {
-                statusMessage = "Patch Active!";
-                isCoinPatchApplied = true;
-            } else {
-                statusMessage = "Patch FAILED!";
+            // Apply patch carefully
+            @try {
+                uint32_t* targetPtr = (uint32_t*)target;
+                *targetPtr = PATCH_BYTES;
+                
+                // Flush any caches
+                __builtin_arm_dmb(0xB);
+                
+                // Read back what we wrote
+                uint32_t readBack = *(uint32_t*)target;
+                
+                // Update debug buffer for menu display
+                snprintf(debugBuffer, sizeof(debugBuffer), 
+                    "Base: 0x%lx\nTarget: 0x%lx\nBefore: 0x%08x\nAfter: 0x%08x\n%s",
+                    BaseAddr & 0xFFFFFFFF,
+                    target & 0xFFFFFFFF,
+                    currentValue,
+                    readBack,
+                    (readBack == PATCH_BYTES) ? "✓ SUCCESS" : "✗ MISMATCH");
+                
+                if (readBack == PATCH_BYTES) {
+                    statusMessage = "Patch Active!";
+                    isCoinPatchApplied = true;
+                } else {
+                    statusMessage = "Patch FAILED!";
+                }
+            } @catch (NSException *e) {
+                statusMessage = "Write crash prevented!";
+                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Write failed\nOffset: 0x%lx", OFFSET_BulletHeroesCoin);
             }
         } 
         else 
@@ -134,32 +163,26 @@ void* BasicHacks::HacksThread(void* arg)
             {
                 statusMessage = "Reverting patch...";
                 
-                uintptr_t BaseAddr = 0;
-                uint32_t imageCount = _dyld_image_count();
-                for (uint32_t i = 0; i < imageCount; i++) {
-                    const char* imageName = _dyld_get_image_name(i);
-                    if (imageName && strstr(imageName, "UnityFramework")) {
-                        BaseAddr = (uintptr_t)_dyld_get_image_header(i);
-                        break;
-                    }
-                }
-                
                 if (BaseAddr == 0) {
-                    statusMessage = "UnityFramework not found!";
+                    statusMessage = "Module not found for revert!";
                 } else {
                     uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
                     
                     os_log(OS_LOG_DEFAULT, "KTemp: Toggle OFF - Reverting patch");
 
-                    uint32_t* targetPtr = (uint32_t*)target;
-                    *targetPtr = ORIGINAL_BYTES;
-                    
-                    __builtin_arm_dmb(0xB);
-                    
-                    uint32_t newValue = *(uint32_t*)target;
-                    os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch reverted! New value: 0x%08x", newValue);
-                    statusMessage = "Patch Inactive";
-                    isCoinPatchApplied = false;
+                    @try {
+                        uint32_t* targetPtr = (uint32_t*)target;
+                        *targetPtr = ORIGINAL_BYTES;
+                        
+                        __builtin_arm_dmb(0xB);
+                        
+                        uint32_t newValue = *(uint32_t*)target;
+                        os_log(OS_LOG_DEFAULT, "KTemp: ✓ Patch reverted! New value: 0x%08x", newValue);
+                        statusMessage = "Patch Inactive";
+                        isCoinPatchApplied = false;
+                    } @catch (NSException *e) {
+                        statusMessage = "Revert crash prevented!";
+                    }
                 }
             } else {
                 statusMessage = "Patch Inactive";
