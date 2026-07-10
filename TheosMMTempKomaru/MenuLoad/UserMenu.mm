@@ -5,18 +5,15 @@ By aq9
 https://github.com/VenerableCode/iOS-Theos-ModMenuTemp-NoJB
 */
 
-
 #include "UserMenu.h"
 #include "Includes.h"
 
 void UserMenu::DrawMenu()
 {
-
-
     //ImVec2 menuPos = ImGui::GetWindowPos();
 	//ImVec2 windowsize = ImGui::GetWindowSize();
 
-    ImVec2 WindowSize = ImVec2(275, 200);
+    ImVec2 WindowSize = ImVec2(275, 250); // Increased height slightly to fit the new button
     ImGui::SetNextWindowSize(WindowSize, ImGuiCond_Once);
 
     ImVec2 WindowPosition = ImVec2((SCREEN_WIDTH - WindowSize.x) / 2, (SCREEN_HEIGHT - WindowSize.y) / 2);
@@ -29,6 +26,11 @@ void UserMenu::DrawMenu()
         ImGuiWindow* CurrentWindow = ImGui::GetCurrentWindow();
         KTempVars.MenuSize   = CurrentWindow->Size;
         KTempVars.MenuOrigin = CurrentWindow->Pos;
+
+        // --- ADDED YOUR MOD TOGGLE HERE ---
+        ImGui::Checkbox("Infinite Sun", &KTempVars.SunModToggle);
+        
+        ImGui::Separator(); // Adds a nice line to separate your mod from the settings
 
         ImGui::SliderFloat("FOV Changer", &KTempVars.CameraFOV, 60.0f, 160.0f);
 
