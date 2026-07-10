@@ -103,58 +103,46 @@ void* BasicHacks::HacksThread(void* arg)
             
             if (BaseAddr == 0) {
                 statusMessage = "Module not found!";
-                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Can't find Unity module\nScanning %u modules...", imageCount);
+                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Can't find Unity module");
                 continue;
             }
             
-            uintptr_t target = BaseAddr + OFFSET_BulletHeroesCoin;
+            // Try patching multiple nearby offsets to find which one actually affects coins
+            // iGameGod showed 0x3121ab4, but the display might read from a different location
+            uintptr_t offsets_to_try[] = {
+                BaseAddr + 0x3121ab0,  // Original -4
+                BaseAddr + 0x3121ab4,  // Main one
+                BaseAddr + 0x3121ab8,  // +4
+                BaseAddr + 0x3121abc,  // +8
+                BaseAddr + 0x3121ac0,  // +12
+            };
             
-            // Safety check - make sure target address is valid
-            if (target < 0x100000000ULL) {  // Must be above 4GB on 64-bit iOS
-                statusMessage = "Invalid target!";
-                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Target too low\n0x%lx", target);
-                continue;
-            }
+            uint32_t value = 111111;
+            bool anySuccess = false;
             
-            // Always read current value
-            uint32_t currentValue = 0;
-            @try {
-                currentValue = *(uint32_t*)target;
-            } @catch (NSException *e) {
-                statusMessage = "Crash prevented!";
-                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Bad address\n0x%lx", target);
-                continue;
-            }
-            
-            // Apply patch carefully
-            @try {
-                uint32_t* targetPtr = (uint32_t*)target;
-                *targetPtr = PATCH_BYTES;
-                
-                // Flush any caches
-                __builtin_arm_dmb(0xB);
-                
-                // Read back what we wrote
-                uint32_t readBack = *(uint32_t*)target;
-                
-                // Update debug buffer for menu display
-                snprintf(debugBuffer, sizeof(debugBuffer), 
-                    "Base: 0x%lx\nTarget: 0x%lx\nBefore: 0x%08x\nAfter: 0x%08x\n%s",
-                    BaseAddr & 0xFFFFFFFF,
-                    target & 0xFFFFFFFF,
-                    currentValue,
-                    readBack,
-                    (readBack == PATCH_BYTES) ? "✓ SUCCESS" : "✗ MISMATCH");
-                
-                if (readBack == PATCH_BYTES) {
-                    statusMessage = "Patch Active!";
-                    isCoinPatchApplied = true;
-                } else {
-                    statusMessage = "Patch FAILED!";
+            for (int i = 0; i < 5; i++) {
+                @try {
+                    uint32_t* ptr = (uint32_t*)offsets_to_try[i];
+                    *ptr = value;
+                    anySuccess = true;
+                } @catch (NSException *e) {
+                    // Skip this offset if it crashes
                 }
+            }
+            
+            // Now read back from the main offset for display
+            @try {
+                uint32_t currentValue = *(uint32_t*)(BaseAddr + 0x3121ab4);
+                
+                snprintf(debugBuffer, sizeof(debugBuffer), 
+                    "Patching 5 offsets with 111111\nRead at +0x3121ab4: 0x%08x\n%s",
+                    currentValue,
+                    anySuccess ? "✓ Patches applied" : "✗ Failed");
+                
+                statusMessage = anySuccess ? "Multi-patch Active!" : "Patch FAILED!";
+                isCoinPatchApplied = anySuccess;
             } @catch (NSException *e) {
-                statusMessage = "Write crash prevented!";
-                snprintf(debugBuffer, sizeof(debugBuffer), "Error: Write failed\nOffset: 0x%lx", OFFSET_BulletHeroesCoin);
+                statusMessage = "Read crash!";
             }
         } 
         else 
