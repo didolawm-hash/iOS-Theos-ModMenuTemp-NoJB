@@ -22,24 +22,20 @@ int lastErrno = 0;
 char debugBuffer[256] = {0};  // For displaying debug info in menu
 
 namespace offsets {
-    // The offset within UnityFramework module (as shown by iGameGod watchpoint)
-    // iGameGod showed: UnityFramework +51518132 = 0x3121ab4
-    constexpr uintptr_t OFFSET_TRY_0 = 0x3121ab4;  // Correct offset from iGameGod
-    constexpr uintptr_t OFFSET_TRY_1 = 0x3121aa0;
-    constexpr uintptr_t OFFSET_TRY_2 = 0x3121aa8;
-    constexpr uintptr_t OFFSET_TRY_3 = 0x3121aac;
-    constexpr uintptr_t OFFSET_TRY_4 = 0x3121ab8;
-    constexpr uintptr_t OFFSET_TRY_5 = 0x3121abc;
-    constexpr uintptr_t OFFSET_TRY_6 = 0x3121ac0;
+    // iGameGod showed: UnityFramework +51518132 which is 0x3121AB4
+    // BUT that might be in CODE section (has "add w8, w8, w19" instruction)
+    // Maybe we need to offset from the DATA section, not TEXT section
+    // Let's try the EXACT offset iGameGod gave us first
     
-    // Current offset being tested
-    constexpr uintptr_t OFFSET_BulletHeroesCoin = OFFSET_TRY_0;
+    // 51518132 decimal = 0x3121AB4 hex
+    constexpr uintptr_t OFFSET_BulletHeroesCoin = 0x3121AB4;
     
     // Original bytes (clean game value)
     constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
     
-    // Test with 111111 instead to verify write actually happens
-    constexpr uint32_t PATCH_BYTES              = 111111;
+    // Coins value
+    constexpr uint32_t PATCH_BYTES              = 999999;
+}
 }
 
 void* BasicHacks::HacksThread(void* arg)
@@ -58,14 +54,17 @@ void* BasicHacks::HacksThread(void* arg)
         uintptr_t BaseAddr = 0;
         uint32_t imageCount = _dyld_image_count();
         
-        // Log first few modules on first run (for debugging)
-        static bool firstRun = true;
-        if (firstRun && KTempVars.SunModToggle) {
-            firstRun = false;
-            os_log(OS_LOG_DEFAULT, "KTemp: Found %u loaded modules", imageCount);
-            for (uint32_t i = 0; i < imageCount && i < 20; i++) {
+        // Log modules on first toggle to help debug
+        static bool logged = false;
+        if (KTempVars.SunModToggle && !logged) {
+            logged = true;
+            os_log(OS_LOG_DEFAULT, "===== MODULE DEBUG INFO =====");
+            for (uint32_t i = 0; i < imageCount && i < 30; i++) {
                 const char* name = _dyld_get_image_name(i);
-                if (name) os_log(OS_LOG_DEFAULT, "KTemp:  [%u] %s", i, name);
+                if (name) {
+                    uintptr_t base = (uintptr_t)_dyld_get_image_header(i);
+                    os_log(OS_LOG_DEFAULT, "[%2u] %s -> 0x%lx", i, name, base);
+                }
             }
         }
         
