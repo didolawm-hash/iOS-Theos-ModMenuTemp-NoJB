@@ -52,6 +52,10 @@ void* BasicHacks::HacksThread(void* arg)
     statusMessage = "Thread running, waiting...";
     os_log(OS_LOG_DEFAULT, "KTemp: HacksThread started!");
     sleep(5); // Allow game to load
+    
+    // Static variables for coin scanner (persist across loop iterations)
+    static uintptr_t coinStorageAddr = 0;
+    static bool hasScanned = false;
 
     while(running)
     {   
@@ -102,6 +106,13 @@ void* BasicHacks::HacksThread(void* arg)
         if (KTempVars.SunModToggle != lastToggleState) {
             os_log(OS_LOG_DEFAULT, "KTemp: Toggle state changed to %d", KTempVars.SunModToggle);
             lastToggleState = KTempVars.SunModToggle;
+            
+            // Reset scanner when toggle changes to OFF
+            if (!KTempVars.SunModToggle) {
+                coinStorageAddr = 0;
+                hasScanned = false;
+                os_log(OS_LOG_DEFAULT, "KTemp: Reset coin scanner for next toggle");
+            }
         }
 
         if (KTempVars.SunModToggle)
@@ -115,10 +126,13 @@ void* BasicHacks::HacksThread(void* arg)
             // Instead of patching a STATIC offset, scan DATA section for ACTUAL coin values
             // and patch those directly (like iGameGod's watchpoint does)
             
-            static uintptr_t coinStorageAddr = 0;
             
-            // First time: search for coin value
-            if (coinStorageAddr == 0) {
+            // First time ONLY: search for coin value (this will take a few seconds)
+            if (coinStorageAddr == 0 && !hasScanned) {
+                hasScanned = true;  // Mark that we're scanning NOW (don't repeat!)
+                statusMessage = "Scanning... (this takes 1-2 sec)";
+                snprintf(debugBuffer, sizeof(debugBuffer), "Scanning DATA section...\nPlease wait...");
+                
                 // Search in DATA section (usually after code section, around offset 0x4000000+)
                 uintptr_t searchStart = BaseAddr + 0x3E00000;
                 uintptr_t searchEnd = BaseAddr + 0x4200000;
@@ -137,6 +151,11 @@ void* BasicHacks::HacksThread(void* arg)
                     }
                 } @catch (NSException *e) {
                     // Search failed
+                }
+                
+                if (coinStorageAddr == 0) {
+                    statusMessage = "Scan failed!";
+                    snprintf(debugBuffer, sizeof(debugBuffer), "Could not find coin storage\nTry different offsets");
                 }
             }
             
