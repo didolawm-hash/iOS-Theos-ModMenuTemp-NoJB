@@ -23,11 +23,11 @@ namespace offsets {
     // Relative static offset for Bullet Heroes
     constexpr uintptr_t OFFSET_BulletHeroesCoin = 0x3121AB0;
     
-    // Original bytes (Make sure to verify these in a clean game!)
+    // Original bytes (clean game value)
     constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
     
-    // Your patch bytes (Converted to Little-Endian)
-    constexpr uint32_t PATCH_BYTES              = 0x0B133108; 
+    // 999999 in hex = 0x0F423F, as 32-bit little-endian = 0x000F423F
+    constexpr uint32_t PATCH_BYTES              = 999999;  // Will write 999999 directly
 }
 
 void* BasicHacks::HacksThread(void* arg)
