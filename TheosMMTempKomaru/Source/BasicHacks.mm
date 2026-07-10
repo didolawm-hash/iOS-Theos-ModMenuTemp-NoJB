@@ -38,8 +38,8 @@ namespace offsets {
     // Original bytes (clean game value)
     constexpr uint32_t ORIGINAL_BYTES           = 0x00000000; 
     
-    // 999999 for infinite coins
-    constexpr uint32_t PATCH_BYTES              = 999999;
+    // Test with 111111 instead to verify write actually happens
+    constexpr uint32_t PATCH_BYTES              = 111111;
 }
 
 void* BasicHacks::HacksThread(void* arg)
