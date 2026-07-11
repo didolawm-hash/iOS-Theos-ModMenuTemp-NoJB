@@ -9,6 +9,8 @@ https://github.com/VenerableCode/iOS-Theos-ModMenuTemp-NoJB
 
 #pragma once
 
+#include <stdint.h>
+
 class BasicHacks {
 public:
     BasicHacks(const BasicHacks&) = delete;
@@ -18,7 +20,7 @@ public:
         return Instance;
     }
 
-    static bool IsValidPointer(long Offset);
+    static bool IsValidPointer(uintptr_t Offset);
     static void* HacksThread(void* arg);
     static bool GetPatchStatus(); // Returns true if patch is applied
     static bool IsThreadRunning(); // Returns true if hack thread is running
