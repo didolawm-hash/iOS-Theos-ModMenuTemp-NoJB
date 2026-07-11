@@ -89,7 +89,13 @@ bool BasicHacks::IsValidPointer(uintptr_t address) {
 
 bool BasicHacks::GetPatchStatus() { return gCoinTrayHUDInstance != nullptr; }
 bool BasicHacks::IsThreadRunning() { return gHackThreadRunning.load(); }
-const char* BasicHacks::GetStatusMessage() { return kStatusMessages[gHackStatus.load()]; }
+const char* BasicHacks::GetStatusMessage() {
+    int status = gHackStatus.load();
+    if (status < kThreadNotStarted || status > kPatchInactive) {
+        return "Unknown";
+    }
+    return kStatusMessages[status];
+}
 const char* BasicHacks::GetDebugInfo() { 
     static char buf[128];
     snprintf(buf, sizeof(buf), "HUD: %p | Toggled: %d", gCoinTrayHUDInstance, KTempVars.SunModToggle);
