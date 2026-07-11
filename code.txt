@@ -1,0 +1,327 @@
+// Namespace: 
+[CompilerGenerated]
+private sealed class CoinHandler.<>c__DisplayClass25_0 // TypeDefIndex: 457
+{
+	// Fields
+	public CoinHandler <>4__this; // 0x10
+	public Camera mainCamera; // 0x18
+	public float startDistance; // 0x20
+	public Vector3 originalScale; // 0x24
+
+	// Methods
+
+	// RVA: 0x30DBDB8 Offset: 0x30DBDB8 VA: 0x30DBDB8
+	public void .ctor() { }
+
+	// RVA: 0x30DC654 Offset: 0x30DC654 VA: 0x30DC654
+	internal void <MoveToUIPosition>b__0() { }
+
+	// RVA: 0x30DC7BC Offset: 0x30DC7BC VA: 0x30DC7BC
+	internal void <MoveToUIPosition>b__1() { }
+}
+
+// Namespace: 
+[CompilerGenerated]
+private sealed class CoinHandler.<WaitAndMoveToUI>d__22 : IEnumerator<object>, IEnumerator<object>, IEnumerator<object> // TypeDefIndex: 458
+{
+	// Fields
+	private int <>1__state; // 0x10
+	private object <>2__current; // 0x18
+	public CoinHandler <>4__this; // 0x20
+	public Vector2 screenPoint; // 0x28
+	private float <elapsed>5__2; // 0x30
+
+	// Properties
+	private object System.Collections.Generic.IEnumerator<System.Object>.Current { get; }
+	private object System.Collections.IEnumerator.Current { get; }
+
+	// Methods
+
+	[DebuggerHidden]
+	// RVA: 0x30DB74C Offset: 0x30DB74C VA: 0x30DB74C
+	public void .ctor(int <>1__state) { }
+
+	[DebuggerHidden]
+	// RVA: 0x30DCCAC Offset: 0x30DCCAC VA: 0x30DCCAC Slot: 5
+	private void System.IDisposable.Dispose() { }
+
+	// RVA: 0x30DCCB0 Offset: 0x30DCCB0 VA: 0x30DCCB0 Slot: 6
+	private bool MoveNext() { }
+
+	[DebuggerHidden]
+	// RVA: 0x30DCD70 Offset: 0x30DCD70 VA: 0x30DCD70 Slot: 4
+	private object System.Collections.Generic.IEnumerator<System.Object>.get_Current() { }
+
+	[DebuggerHidden]
+	// RVA: 0x30DCD78 Offset: 0x30DCD78 VA: 0x30DCD78 Slot: 8
+	private void System.Collections.IEnumerator.Reset() { }
+
+	[DebuggerHidden]
+	// RVA: 0x30DCDB8 Offset: 0x30DCDB8 VA: 0x30DCDB8 Slot: 7
+	private object System.Collections.IEnumerator.get_Current() { }
+}
+
+// Namespace: 
+public class CoinHandler : MonoBehaviour // TypeDefIndex: 459
+{
+	// Fields
+	private CharacterHandler characterHandler; // 0x20
+	public VectorRangeUtility forceUtility; // 0x28
+	public VectorRangeUtility torqueUtility; // 0x30
+	public bool isCoin; // 0x38
+	public float waitTime; // 0x3C
+	public float rotateSpeed; // 0x40
+	public Vector3 initialOffset; // 0x44
+	public bool useWorldSpaceZ; // 0x50
+	[Header("Positioning Adjustments")]
+	public Vector3 positionOffset; // 0x54
+	public float zDistance; // 0x60
+	public Rigidbody rb; // 0x68
+	public GameObject coinModel; // 0x70
+	private bool isInitialized; // 0x78
+	public bool isPaused; // 0x79
+	public bool addedToTray; // 0x7A
+	private Vector3 pausedVelocity; // 0x7C
+	private Vector3 pausedAngularVelocity; // 0x88
+	private int numericValue; // 0x94
+
+	// Methods
+
+	// RVA: 0x30DB170 Offset: 0x30DB170 VA: 0x30DB170
+	private void OnEnable() { }
+
+	// RVA: 0x30DB274 Offset: 0x30DB274 VA: 0x30DB274
+	private void OnDisable() { }
+
+	// RVA: 0x30DB384 Offset: 0x30DB384 VA: 0x30DB384
+	public void InitializeCoin(CharacterHandler characterHandler, bool addedToTray = False, Nullable<Vector2> screenPoint, int coinValue = 0) { }
+
+	// RVA: 0x30DB5D8 Offset: 0x30DB5D8 VA: 0x30DB5D8
+	private Vector2 GetScreenUIPoint() { }
+
+	[IteratorStateMachine(typeof(CoinHandler.<WaitAndMoveToUI>d__22))]
+	// RVA: 0x30DB6C0 Offset: 0x30DB6C0 VA: 0x30DB6C0
+	private IEnumerator WaitAndMoveToUI(Vector2 screenPoint) { }
+
+	// RVA: 0x30DB778 Offset: 0x30DB778 VA: 0x30DB778
+	public void PauseCoin() { }
+
+	// RVA: 0x30DB958 Offset: 0x30DB958 VA: 0x30DB958
+	public void ResumeCoin() { }
+
+	// RVA: 0x30DB9FC Offset: 0x30DB9FC VA: 0x30DB9FC
+	public void MoveToUIPosition(Vector2 screenPoint) { }
+
+	// RVA: 0x30DBE64 Offset: 0x30DBE64 VA: 0x30DBE64
+	public void HandleObjectCleanup() { }
+
+	// RVA: 0x30DC118 Offset: 0x30DC118 VA: 0x30DC118
+	private void OnCollisionEnter(Collision other) { }
+
+	// RVA: 0x30DC1F8 Offset: 0x30DC1F8 VA: 0x30DC1F8
+	public void CleanUp() { }
+
+	// RVA: 0x30DC304 Offset: 0x30DC304 VA: 0x30DC304
+	public void ResetForPool() { }
+
+	// RVA: 0x30DC5A8 Offset: 0x30DC5A8 VA: 0x30DC5A8
+	public void .ctor() { }
+}
+
+// Namespace: 
+[Serializable]
+public class VectorRangeUtility // TypeDefIndex: 460
+{
+	// Fields
+	[Header("Min/Max Per Axis")]
+	public Vector2 xAxis; // 0x10
+	public Vector2 yAxis; // 0x18
+	public Vector2 zAxis; // 0x20
+
+	// Methods
+
+	// RVA: 0x30DB57C Offset: 0x30DB57C VA: 0x30DB57C
+	public Vector3 GetVectorInRange() { }
+
+	// RVA: 0x30DCDC0 Offset: 0x30DCDC0 VA: 0x30DCDC0
+	public void .ctor() { }
+}
+
+// Namespace: 
+public class CoinHUDHandler : MonoBehaviour // TypeDefIndex: 461
+{
+	// Fields
+	public RectTransform coin_Icon; // 0x20
+	public TMP_Text coin_txt; // 0x28
+	public GameObject bgObj; // 0x30
+	public Button addMoreBTN; // 0x38
+	private RectTransform bgRectTransform; // 0x40
+	public float normalScreen_X_Pos; // 0x48
+
+	// Methods
+
+	// RVA: 0x30DCDC8 Offset: 0x30DCDC8 VA: 0x30DCDC8
+	private void Awake() { }
+
+	// RVA: 0x30DCEC8 Offset: 0x30DCEC8 VA: 0x30DCEC8
+	private void OnEnable() { }
+
+	// RVA: 0x30DCB78 Offset: 0x30DCB78 VA: 0x30DCB78
+	public void SetCoinText() { }
+
+	// RVA: 0x30DCF98 Offset: 0x30DCF98 VA: 0x30DCF98
+	public void SetAddMoreVibility(bool shouldActive) { }
+
+	// RVA: 0x30DCECC Offset: 0x30DCECC VA: 0x30DCECC
+	public void SetForNormalScreen() { }
+
+	// RVA: 0x30DD064 Offset: 0x30DD064 VA: 0x30DD064
+	public void .ctor() { }
+}
+
+// Namespace: 
+[CompilerGenerated]
+[Serializable]
+private sealed class CoinObjectPool.<>c // TypeDefIndex: 462
+{
+	// Fields
+	public static readonly CoinObjectPool.<>c <>9; // 0x0
+	public static Predicate<CoinHandler> <>9__14_0; // 0x8
+
+	// Methods
+
+	// RVA: 0x30DE098 Offset: 0x30DE098 VA: 0x30DE098
+	private static void .cctor() { }
+
+	// RVA: 0x30DE0FC Offset: 0x30DE0FC VA: 0x30DE0FC
+	public void .ctor() { }
+
+	// RVA: 0x30DE104 Offset: 0x30DE104 VA: 0x30DE104
+	internal bool <CleanupNullReferences>b__14_0(CoinHandler coin) { }
+}
+
+// Namespace: 
+public class CoinObjectPool : MonoBehaviour // TypeDefIndex: 463
+{
+	// Fields
+	public static CoinObjectPool Instance; // 0x0
+	[Header("Pool Settings")]
+	public CoinHandler coinPrefab; // 0x20
+	public int poolSize; // 0x28
+	public Transform poolContainer; // 0x30
+	private Queue<CoinHandler> availableCoin; // 0x38
+	private List<CoinHandler> activeCoin; // 0x40
+
+	// Methods
+
+	// RVA: 0x30DD074 Offset: 0x30DD074 VA: 0x30DD074
+	private void Awake() { }
+
+	// RVA: 0x30DD198 Offset: 0x30DD198 VA: 0x30DD198
+	private void InitializePool() { }
+
+	// RVA: 0x30DD384 Offset: 0x30DD384 VA: 0x30DD384
+	public CoinHandler GetCoin() { }
+
+	// RVA: 0x30DBF34 Offset: 0x30DBF34 VA: 0x30DBF34
+	public void ReturnCoin(CoinHandler coin) { }
+
+	// RVA: 0x30DD67C Offset: 0x30DD67C VA: 0x30DD67C
+	private void ResetCoin(CoinHandler coin) { }
+
+	// RVA: 0x30DD99C Offset: 0x30DD99C VA: 0x30DD99C
+	public void ReturnAllActiveCoin() { }
+
+	// RVA: 0x30DDBEC Offset: 0x30DDBEC VA: 0x30DDBEC
+	public int GetActiveCoinCount() { }
+
+	// RVA: 0x30DDC38 Offset: 0x30DDC38 VA: 0x30DDC38
+	public int GetAvailableCoinCount() { }
+
+	// RVA: 0x30DDC84 Offset: 0x30DDC84 VA: 0x30DDC84
+	public void CleanupNullReferences() { }
+
+	// RVA: 0x30DDFB0 Offset: 0x30DDFB0 VA: 0x30DDFB0
+	public void .ctor() { }
+}
+
+// Namespace: 
+public class CoinTrayHUD : MonoBehaviour // TypeDefIndex: 464
+{
+	// Fields
+	public static CoinTrayHUD Instance; // 0x0
+	[Header("Coin HUD References")]
+	public RectTransform coinHUD; // 0x20
+	public TMP_Text coin_TXT; // 0x28
+	public Transform coin_Pos; // 0x30
+	[Header("HUD Settings")]
+	public float hudWaitTime; // 0x38
+	public float hudAnimationTime; // 0x3C
+	public Ease hudAnimationEase; // 0x40
+	public Vector2 hudXAnimVector; // 0x44
+	[Header("Coin References")]
+	[ReadOnly]
+	public int total_coins; // 0x4C
+	private Tween currentTween; // 0x50
+	private float HUDOpenTime; // 0x58
+	private bool isClosing; // 0x5C
+	private bool isNotOpenYet; // 0x5D
+
+	// Properties
+	public float FlyTime { get; }
+
+	// Methods
+
+	// RVA: 0x30DE1F8 Offset: 0x30DE1F8 VA: 0x30DE1F8
+	public float get_FlyTime() { }
+
+	// RVA: 0x30DE208 Offset: 0x30DE208 VA: 0x30DE208
+	private void Awake() { }
+
+	// RVA: 0x30DE488 Offset: 0x30DE488 VA: 0x30DE488
+	private void Start() { }
+
+	// RVA: 0x30DE5B4 Offset: 0x30DE5B4 VA: 0x30DE5B4
+	private void OnDestroy() { }
+
+	// RVA: 0x30DE6E0 Offset: 0x30DE6E0 VA: 0x30DE6E0
+	public void AddCoin(int coins) { }
+
+	// RVA: 0x30DCAC0 Offset: 0x30DCAC0 VA: 0x30DCAC0
+	public void AddVisualCoin(int coins) { }
+
+	// RVA: 0x30DE8F4 Offset: 0x30DE8F4 VA: 0x30DE8F4
+	public void SetCoinText() { }
+
+	// RVA: 0x30DE998 Offset: 0x30DE998 VA: 0x30DE998
+	public Vector2 GetCoinScreenPoint() { }
+
+	// RVA: 0x30DE75C Offset: 0x30DE75C VA: 0x30DE75C
+	private void OpenCoinHUD() { }
+
+	// RVA: 0x30DEA30 Offset: 0x30DEA30 VA: 0x30DEA30
+	private void PauseCoinHUD() { }
+
+	// RVA: 0x30DEAB8 Offset: 0x30DEAB8 VA: 0x30DEAB8
+	private void ResumeCoinHUD() { }
+
+	// RVA: 0x30DEB40 Offset: 0x30DEB40 VA: 0x30DEB40
+	private void CloseCoinHUD() { }
+
+	// RVA: 0x30DE370 Offset: 0x30DE370 VA: 0x30DE370
+	private void ForceCloseCoinHUD() { }
+
+	// RVA: 0x30DECBC Offset: 0x30DECBC VA: 0x30DECBC
+	private void Update() { }
+
+	// RVA: 0x30DED6C Offset: 0x30DED6C VA: 0x30DED6C
+	public void .ctor() { }
+
+	[CompilerGenerated]
+	// RVA: 0x30DED88 Offset: 0x30DED88 VA: 0x30DED88
+	private void <OpenCoinHUD>b__22_0() { }
+
+	[CompilerGenerated]
+	// RVA: 0x30DED94 Offset: 0x30DED94 VA: 0x30DED94
+	private void <CloseCoinHUD>b__25_0() { }
+}
