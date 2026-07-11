@@ -12,9 +12,25 @@
 typedef void (*CoinTrayHUDUpdate_t)(void* self);
 CoinTrayHUDUpdate_t orig_CoinTrayHUDUpdate = nullptr;
 
+enum HackStatus : int {
+    kThreadNotStarted = 0,
+    kWaitingForGameLoad,
+    kWaitingForHUD,
+    kCoinsLocked,
+    kPatchInactive,
+};
+
+static const char* const kStatusMessages[] = {
+    "Thread not started",
+    "Waiting for game load...",
+    "Waiting for HUD...",
+    "Coins Locked!",
+    "Patch Inactive",
+};
+
 static void* gCoinTrayHUDInstance = nullptr;
 static std::atomic<bool> gHackThreadRunning(false);
-static std::atomic<const char*> gStatusMessage("Thread not started");
+static std::atomic<int> gHackStatus(kThreadNotStarted);
 
 // 2. The Hook: Captures the instance during the game's update loop
 void Hook_CoinTrayHUDUpdate(void* self) {
@@ -30,7 +46,7 @@ void Hook_CoinTrayHUDUpdate(void* self) {
 void* BasicHacks::HacksThread(void* arg) {
     (void)arg;
     gHackThreadRunning.store(true);
-    gStatusMessage.store("Waiting for game load...");
+    gHackStatus.store(kWaitingForGameLoad);
     sleep(10); // Wait longer to ensure game is fully loaded
     
     uintptr_t base = (uintptr_t)_dyld_get_image_header(0);
@@ -52,11 +68,11 @@ void* BasicHacks::HacksThread(void* arg) {
             *(int*)coinAddr = 999999; 
             
             // Update status for your UI
-            gStatusMessage.store("Coins Locked!");
+            gHackStatus.store(kCoinsLocked);
         } else if (!gCoinTrayHUDInstance) {
-            gStatusMessage.store("Waiting for HUD...");
+            gHackStatus.store(kWaitingForHUD);
         } else {
-            gStatusMessage.store("Patch Inactive");
+            gHackStatus.store(kPatchInactive);
         }
     }
     return NULL;
@@ -67,13 +83,13 @@ void BasicHacks::Initialize() {
     pthread_create(&thread, NULL, HacksThread, NULL);
 }
 
-bool BasicHacks::IsValidPointer(uintptr_t Offset) {
-    return KomaruPatch::IsValidPointer(Offset);
+bool BasicHacks::IsValidPointer(uintptr_t address) {
+    return KomaruPatch::IsValidPointer(address);
 }
 
 bool BasicHacks::GetPatchStatus() { return gCoinTrayHUDInstance != nullptr; }
 bool BasicHacks::IsThreadRunning() { return gHackThreadRunning.load(); }
-const char* BasicHacks::GetStatusMessage() { return gStatusMessage.load(); }
+const char* BasicHacks::GetStatusMessage() { return kStatusMessages[gHackStatus.load()]; }
 const char* BasicHacks::GetDebugInfo() { 
     static char buf[128];
     snprintf(buf, sizeof(buf), "HUD: %p | Toggled: %d", gCoinTrayHUDInstance, KTempVars.SunModToggle);
