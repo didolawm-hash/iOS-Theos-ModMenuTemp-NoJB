@@ -27,6 +27,9 @@ static const char* const kStatusMessages[] = {
     "Coins Locked!",
     "Patch Inactive",
 };
+static constexpr unsigned int kStatusMessageCount = sizeof(kStatusMessages) / sizeof(kStatusMessages[0]);
+static constexpr unsigned int kInitialLoadDelaySeconds = 10;
+static_assert(kStatusMessageCount == (kPatchInactive + 1), "Status messages must match HackStatus values");
 
 static void* gCoinTrayHUDInstance = nullptr;
 static std::atomic<bool> gHackThreadRunning(false);
@@ -47,7 +50,7 @@ void* BasicHacks::HacksThread(void* arg) {
     (void)arg;
     gHackThreadRunning.store(true);
     gHackStatus.store(kWaitingForGameLoad);
-    sleep(10); // Wait longer to ensure game is fully loaded
+    sleep(kInitialLoadDelaySeconds);
     
     uintptr_t base = (uintptr_t)_dyld_get_image_header(0);
     // 0x30DECBC is the RVA for CoinTrayHUD.Update()
@@ -75,12 +78,12 @@ void* BasicHacks::HacksThread(void* arg) {
             gHackStatus.store(kPatchInactive);
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 void BasicHacks::Initialize() {
     pthread_t thread;
-    pthread_create(&thread, NULL, HacksThread, NULL);
+    pthread_create(&thread, nullptr, HacksThread, nullptr);
 }
 
 bool BasicHacks::IsValidPointer(uintptr_t address) {
@@ -91,7 +94,7 @@ bool BasicHacks::GetPatchStatus() { return gCoinTrayHUDInstance != nullptr; }
 bool BasicHacks::IsThreadRunning() { return gHackThreadRunning.load(); }
 const char* BasicHacks::GetStatusMessage() {
     int status = gHackStatus.load();
-    if (status < kThreadNotStarted || status > kPatchInactive) {
+    if (status < 0 || static_cast<unsigned int>(status) >= kStatusMessageCount) {
         return "Unknown";
     }
     return kStatusMessages[status];
