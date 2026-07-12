@@ -5,37 +5,33 @@
 #include <os/log.h>
 #include <atomic>
 
-// Static variables to maintain patch state
 static std::atomic<bool> gHackThreadRunning(false);
 static std::atomic<bool> gPatchApplied(false);
 static std::atomic<const char*> gCurrentStatus("Patch Initializing...");
 
-// The offset confirmed via iGameGod Watchpoint
-static constexpr uintptr_t kCoinPatchOffset = 0x3121ab4; 
-static constexpr int kTargetCoinValue = 999999;
+// Ensure these constants are defined globally
+static constexpr uintptr_t kCoinPatchOffset = 0x3121ab0; 
+static constexpr uint32_t kTargetCoinValue = 0x528F4268; // The mov w8, #999999 instruction
 
 void* BasicHacks::HacksThread(void* arg) {
     (void)arg;
     gHackThreadRunning.store(true);
     
-    // Give the game enough time to fully load the binary into memory
-    sleep(10); 
+    sleep(10); // Wait for binary load
 
-    // Calculate the absolute address of the coin balance
     uintptr_t base = (uintptr_t)_dyld_get_image_header(0);
     uintptr_t targetAddr = base + kCoinPatchOffset; 
     
     while(true) {
-        usleep(500000); // 500ms cycle
+        usleep(500000); 
 
         if (KTempVars.SunModToggle) {
-            // Verify if the address is currently valid
             if (KomaruPatch::IsValidPointer(targetAddr)) {
-                // Perform the write using KomaruPatch to ensure memory is writable (vm_protect)
-                KomaruPatch::WriteMem<int>(targetAddr, kTargetCoinValue);
+                // Write the ARM64 instruction (uint32_t)
+                KomaruPatch::WriteMem<uint32_t>(targetAddr, kTargetCoinValue);
                 
-                // Verify the write was successful
-                int verifyValue = KomaruPatch::ReadMem(targetAddr);
+                // Verify the write
+                uint32_t verifyValue = KomaruPatch::ReadMem<uint32_t>(targetAddr);
                 if (verifyValue == kTargetCoinValue) {
                     gPatchApplied.store(true, std::memory_order_relaxed);
                     gCurrentStatus.store("Coins Patched!", std::memory_order_relaxed);
@@ -45,7 +41,7 @@ void* BasicHacks::HacksThread(void* arg) {
                 }
             } else {
                 gPatchApplied.store(false, std::memory_order_relaxed);
-                gCurrentStatus.store("Invalid Memory Address", std::memory_order_relaxed);
+                gCurrentStatus.store("Invalid Address", std::memory_order_relaxed);
             }
         } else {
             gPatchApplied.store(false, std::memory_order_relaxed);
@@ -55,6 +51,7 @@ void* BasicHacks::HacksThread(void* arg) {
     return nullptr;
 }
 
+// ... Keep your existing Initialize and helper functions below ...
 void BasicHacks::Initialize() {
     pthread_t thread;
     pthread_create(&thread, nullptr, HacksThread, nullptr);
