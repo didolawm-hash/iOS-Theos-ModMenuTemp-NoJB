@@ -31,7 +31,7 @@ void* BasicHacks::HacksThread(void* arg) {
                 KomaruPatch::WriteMem<uint32_t>(targetAddr, kTargetCoinValue);
                 
                 // Verify the write
-                uint32_t verifyValue = KomaruPatch::ReadMem<uint32_t>(targetAddr);
+                uint32_t verifyValue = static_cast<uint32_t>(KomaruPatch::ReadMem(targetAddr));
                 if (verifyValue == kTargetCoinValue) {
                     gPatchApplied.store(true, std::memory_order_relaxed);
                     gCurrentStatus.store("Coins Patched!", std::memory_order_relaxed);
