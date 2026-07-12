@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <os/log.h>
 #include <atomic>
-#include <cstring> // Required for memcpy
+#include <cstring> 
 
 static std::atomic<bool> gHackThreadRunning(false);
 static std::atomic<bool> gPatchApplied(false);
@@ -12,7 +12,7 @@ static std::atomic<const char*> gCurrentStatus("Patch Initializing...");
 
 // The target address and the exact bytes from your working Live Patcher
 static constexpr uintptr_t kCoinPatchOffset = 0x3121ab0; 
-static const unsigned char kTargetBytes[] = {0xE8, 0xFF, 0x8F, 0x52}; // E8 FF 8F 52
+static const unsigned char kTargetBytes[] = {0xE8, 0xFF, 0x8F, 0x52}; 
 
 void* BasicHacks::HacksThread(void* arg) {
     (void)arg;
@@ -28,9 +28,8 @@ void* BasicHacks::HacksThread(void* arg) {
 
         if (KTempVars.SunModToggle) {
             if (KomaruPatch::IsValidPointer(targetAddr)) {
-                // Using raw byte writing to match the Live Patcher's behavior
-                // We use KomaruPatch to handle the vm_protect automatically
-                KomaruPatch::WriteMem(targetAddr, (void*)kTargetBytes, sizeof(kTargetBytes));
+                // Apply the patch
+                KomaruPatch::WriteMem(targetAddr, kTargetBytes, sizeof(kTargetBytes));
                 
                 // Verify the bytes at the address
                 unsigned char buffer[4];
