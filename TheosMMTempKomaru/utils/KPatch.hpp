@@ -4,12 +4,18 @@
 #include <cstring>
 #include <mach/mach.h>
 #include <mach/vm_map.h>
+#include <libkern/OSCacheControl.h>
 
 class KomaruPatch {
 public:
     // Increased range to ensure we don't block valid memory regions
     static bool IsValidPointer(uintptr_t address) {
         return address > 0x1000 && address < 0xFFFFFFFFFFFFFFFF;
+    }
+
+    static void ReadMem(uintptr_t address, void* buffer, size_t size) {
+        if (!IsValidPointer(address)) return;
+        memcpy(buffer, reinterpret_cast<void*>(address), size);
     }
 
     static void WriteMem(uintptr_t address, const void* data, size_t size) {
