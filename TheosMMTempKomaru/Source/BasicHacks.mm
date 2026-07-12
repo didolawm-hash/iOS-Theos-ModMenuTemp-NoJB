@@ -13,11 +13,12 @@ void* BasicHacks::HacksThread(void* arg) {
     sleep(10); // Wait for binary to load
 
     uintptr_t base = (uintptr_t)_dyld_get_image_header(0);
-    // Hardcoded offset for the target ARM64 instruction inside the main image.
+    // Hardcoded offset for the target ARM64 instruction in the game's coin update routine
+    // (offset identified during runtime analysis with iGameGod/memory inspection).
     uintptr_t targetAddr = base + 0x30DE1F8; 
     
     // ARM64 machine code for: mov w8, #0xF423F (999999 decimal),
-    // generated/verified with ARM64 disassembler/assembler tooling.
+    // generated/verified with ARM64 assembler/disassembler tooling (e.g. llvm-mc/objdump).
     uint32_t patchBytes = 0x528F4278; 
     bool patchApplied = false;
 
@@ -28,6 +29,9 @@ void* BasicHacks::HacksThread(void* arg) {
             if (KomaruPatch::IsValidPointer(targetAddr)) {
                 uint32_t currentValue = static_cast<uint32_t>(KomaruPatch::ReadMem(targetAddr));
                 if (!patchApplied || currentValue != patchBytes) {
+                    if (patchApplied && currentValue != patchBytes) {
+                        os_log_debug(OS_LOG_DEFAULT, "Patch value changed (0x%x). Reapplying.", currentValue);
+                    }
                     KomaruPatch::WriteMem<uint32_t>(targetAddr, patchBytes);
                     patchApplied = true;
                 }
