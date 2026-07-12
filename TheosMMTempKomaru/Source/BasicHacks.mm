@@ -4,43 +4,45 @@
 #include <unistd.h>
 #include <os/log.h>
 #include <atomic>
+#include <cstring> // Required for memcpy
 
 static std::atomic<bool> gHackThreadRunning(false);
 static std::atomic<bool> gPatchApplied(false);
 static std::atomic<const char*> gCurrentStatus("Patch Initializing...");
 
-// Ensure these constants are defined globally
+// The target address and the exact bytes from your working Live Patcher
 static constexpr uintptr_t kCoinPatchOffset = 0x3121ab0; 
-static constexpr uint32_t kTargetCoinValue = 0x528F4268; // The mov w8, #999999 instruction
+static const unsigned char kTargetBytes[] = {0xE8, 0xFF, 0x8F, 0x52}; // E8 FF 8F 52
 
 void* BasicHacks::HacksThread(void* arg) {
     (void)arg;
     gHackThreadRunning.store(true);
     
-    sleep(10); // Wait for binary load
+    sleep(10); // Wait for binary to load
 
     uintptr_t base = (uintptr_t)_dyld_get_image_header(0);
     uintptr_t targetAddr = base + kCoinPatchOffset; 
     
     while(true) {
-        usleep(500000); 
+        usleep(500000); // 500ms patch loop
 
         if (KTempVars.SunModToggle) {
             if (KomaruPatch::IsValidPointer(targetAddr)) {
-                // Write the ARM64 instruction (uint32_t)
-                KomaruPatch::WriteMem<uint32_t>(targetAddr, kTargetCoinValue);
+                // Using raw byte writing to match the Live Patcher's behavior
+                // We use KomaruPatch to handle the vm_protect automatically
+                KomaruPatch::WriteMem(targetAddr, (void*)kTargetBytes, sizeof(kTargetBytes));
                 
-                // Verify the write
-                uint32_t verifyValue = static_cast<uint32_t>(KomaruPatch::ReadMem(targetAddr));
-                if (verifyValue == kTargetCoinValue) {
+                // Verify the bytes at the address
+                unsigned char buffer[4];
+                KomaruPatch::ReadMem(targetAddr, buffer, sizeof(buffer));
+                
+                if (memcmp(buffer, kTargetBytes, sizeof(kTargetBytes)) == 0) {
                     gPatchApplied.store(true, std::memory_order_relaxed);
                     gCurrentStatus.store("Coins Patched!", std::memory_order_relaxed);
                 } else {
-                    gPatchApplied.store(false, std::memory_order_relaxed);
-                    gCurrentStatus.store("Write Verification Failed", std::memory_order_relaxed);
+                    gCurrentStatus.store("Write Failed", std::memory_order_relaxed);
                 }
             } else {
-                gPatchApplied.store(false, std::memory_order_relaxed);
                 gCurrentStatus.store("Invalid Address", std::memory_order_relaxed);
             }
         } else {
@@ -51,13 +53,11 @@ void* BasicHacks::HacksThread(void* arg) {
     return nullptr;
 }
 
-// ... Keep your existing Initialize and helper functions below ...
 void BasicHacks::Initialize() {
     pthread_t thread;
     pthread_create(&thread, nullptr, HacksThread, nullptr);
 }
 
-// Helper methods for the UI menu status
 bool BasicHacks::IsValidPointer(uintptr_t address) {
     return KomaruPatch::IsValidPointer(address);
 }
@@ -65,4 +65,4 @@ bool BasicHacks::IsValidPointer(uintptr_t address) {
 bool BasicHacks::GetPatchStatus() { return gPatchApplied.load(std::memory_order_relaxed); }
 bool BasicHacks::IsThreadRunning() { return gHackThreadRunning.load(); }
 const char* BasicHacks::GetStatusMessage() { return gCurrentStatus.load(std::memory_order_relaxed); }
-const char* BasicHacks::GetDebugInfo() { return "Direct Memory Patching (Static Offset)"; }
+const char* BasicHacks::GetDebugInfo() { return "Direct Byte Patching (Raw)"; }
