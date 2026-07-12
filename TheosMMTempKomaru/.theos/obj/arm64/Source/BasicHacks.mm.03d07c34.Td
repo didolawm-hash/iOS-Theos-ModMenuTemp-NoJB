@@ -79,16 +79,18 @@
   /opt/theos/vendor/include/MediaRemote/module.modulemap \
   /opt/theos/vendor/include/libactivator/module.modulemap \
   /opt/theos/vendor/include/CameraKit/module.modulemap \
-  Source/../MenuLoad/Includes.h Source/../MenuLoad/ImGuiDrawView.h \
+  Source/../MenuLoad/Includes.h \
+  /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/ImGuiDrawView.h \
   /opt/theos/sdks/iPhoneOS16.5.sdk/usr/include/mach-o/compact_unwind_encoding.modulemap \
   /opt/theos/sdks/iPhoneOS16.5.sdk/usr/include/mach-o/dyld.modulemap \
-  Source/../MenuLoad/MenuLoad.h Source/../MenuLoad/../ImGui/imgui.h \
+  /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/MenuLoad.h \
+  /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../ImGui/imgui.h \
   /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/ImGui/imconfig.h \
-  Source/../MenuLoad/../ImGui/imgui_internal.h \
+  /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../ImGui/imgui_internal.h \
   /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/ImGui/imstb_textedit.h \
-  Source/../MenuLoad/../ImGui/imgui_impl_metal.h \
+  /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../ImGui/imgui_impl_metal.h \
   /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/ImGui/imgui.h \
-  Source/../MenuLoad/../utils/KPatch.hpp \
+  /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../utils/KPatch.hpp \
   /opt/theos/vendor/include/substrate.h \
   /opt/theos/vendor/lib/CydiaSubstrate.framework/Modules/module.modulemap \
   /opt/theos/vendor/lib/CydiaSubstrate.framework/Headers/CydiaSubstrate.h
@@ -255,27 +257,27 @@ Source/BasicHacks.h:
 
 Source/../MenuLoad/Includes.h:
 
-Source/../MenuLoad/ImGuiDrawView.h:
+/home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/ImGuiDrawView.h:
 
 /opt/theos/sdks/iPhoneOS16.5.sdk/usr/include/mach-o/compact_unwind_encoding.modulemap:
 
 /opt/theos/sdks/iPhoneOS16.5.sdk/usr/include/mach-o/dyld.modulemap:
 
-Source/../MenuLoad/MenuLoad.h:
+/home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/MenuLoad.h:
 
-Source/../MenuLoad/../ImGui/imgui.h:
+/home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../ImGui/imgui.h:
 
 /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/ImGui/imconfig.h:
 
-Source/../MenuLoad/../ImGui/imgui_internal.h:
+/home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../ImGui/imgui_internal.h:
 
 /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/ImGui/imstb_textedit.h:
 
-Source/../MenuLoad/../ImGui/imgui_impl_metal.h:
+/home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../ImGui/imgui_impl_metal.h:
 
 /home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/ImGui/imgui.h:
 
-Source/../MenuLoad/../utils/KPatch.hpp:
+/home/runner/work/iOS-Theos-ModMenuTemp-NoJB/iOS-Theos-ModMenuTemp-NoJB/TheosMMTempKomaru/MenuLoad/../utils/KPatch.hpp:
 
 /opt/theos/vendor/include/substrate.h:
 
