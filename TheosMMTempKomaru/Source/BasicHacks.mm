@@ -24,12 +24,11 @@ void* BasicHacks::HacksThread(void* arg) {
         usleep(500000); // 500ms patch loop
 
         if (KTempVars.SunModToggle) {
-            // Write directly to the code segment
-            // KomaruPatch handles vm_protect to make this segment writable
-            if (KomaruPatch::WriteMem<uint32_t>(targetAddr, patchBytes)) {
+            if (KomaruPatch::IsValidPointer(targetAddr)) {
+                KomaruPatch::WriteMem<uint32_t>(targetAddr, patchBytes);
                 gCurrentStatus = "Coins Patched via Assembly!";
             } else {
-                gCurrentStatus = "Patch Failed (Permission Denied)";
+                gCurrentStatus = "Patch Failed (Invalid Address)";
             }
         } else {
             gCurrentStatus = "Patch Inactive";
@@ -43,6 +42,11 @@ void BasicHacks::Initialize() {
     pthread_create(&thread, nullptr, HacksThread, nullptr);
 }
 
+bool BasicHacks::IsValidPointer(uintptr_t address) {
+    return KomaruPatch::IsValidPointer(address);
+}
+
 bool BasicHacks::GetPatchStatus() { return KTempVars.SunModToggle; }
+bool BasicHacks::IsThreadRunning() { return gHackThreadRunning.load(); }
 const char* BasicHacks::GetStatusMessage() { return gCurrentStatus; }
 const char* BasicHacks::GetDebugInfo() { return "Using Assembly Patch (No-Hook)"; }
