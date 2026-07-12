@@ -30,13 +30,20 @@ void* BasicHacks::HacksThread(void* arg) {
 
         if (KTempVars.SunModToggle) {
             if (KomaruPatch::IsValidPointer(targetAddr)) {
+                // ReadMem returns uintptr_t; cast to 32-bit because this target is a single ARM64 instruction word.
                 uint32_t currentValue = static_cast<uint32_t>(KomaruPatch::ReadMem(targetAddr));
                 if (!gPatchApplied.load(std::memory_order_relaxed) || currentValue != patchBytes) {
                     if (currentValue != patchBytes) {
                         os_log_debug(OS_LOG_DEFAULT, "Patch value changed (0x%x). Reapplying.", currentValue);
                     }
                     KomaruPatch::WriteMem<uint32_t>(targetAddr, patchBytes);
-                    gPatchApplied.store(true, std::memory_order_relaxed);
+                    uint32_t verifyValue = static_cast<uint32_t>(KomaruPatch::ReadMem(targetAddr));
+                    bool applied = (verifyValue == patchBytes);
+                    gPatchApplied.store(applied, std::memory_order_relaxed);
+                    if (!applied) {
+                        gCurrentStatus.store("Patch Failed (Write Verify)", std::memory_order_relaxed);
+                        continue;
+                    }
                 }
                 gCurrentStatus.store("Coins Patched via Assembly!", std::memory_order_relaxed);
             } else {
@@ -48,8 +55,6 @@ void* BasicHacks::HacksThread(void* arg) {
             gCurrentStatus.store("Patch Inactive", std::memory_order_relaxed);
         }
     }
-    gPatchApplied.store(false, std::memory_order_relaxed);
-    gHackThreadRunning.store(false, std::memory_order_relaxed);
     return nullptr;
 }
 
